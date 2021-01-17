@@ -11,6 +11,7 @@ extern "C" {
 pub fn main() {
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
+    println!("{:?}", env::current_dir().unwrap().into_os_string());
 
     println!("Initialize");
     unsafe { vm::init() };
