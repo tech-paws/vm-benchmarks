@@ -1,7 +1,7 @@
 use vm::{
     commands,
     commands_bus::Source,
-    data::{Command, CommandPayload, Vec2f},
+    data::{Command, BytesBuffer, Vec2f},
     module::{Module, ModuleState, CLIENT_ID},
 };
 
@@ -34,7 +34,7 @@ impl Module for QuadsModule {
             Vec2f::new(0.0, 100.0),
         ];
 
-        let command_payload = CommandPayload::new(&points);
+        let command_payload = BytesBuffer::new(&points);
         let command = Command::new(commands::gapi::DRAW_QUADS, command_payload);
 
         commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
