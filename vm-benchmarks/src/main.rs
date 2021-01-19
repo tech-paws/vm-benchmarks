@@ -21,34 +21,33 @@ pub fn main() {
     env_logger::init();
 
     let path = env::current_exe().unwrap();
+    let assets_path = path
+        .as_path()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("assets");
+
     // TODO(sysint64): Just for debug purposes
-    let assets_path = CString::new(
-        path.as_path()
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("assets")
-            .to_str()
-            .unwrap(),
-    )
-    .unwrap();
+    let assets_path_cstring = CString::new(assets_path.to_str().unwrap()).unwrap();
 
     let title = CString::new("VM Benchmarks").unwrap();
     let config = ShellConfig {
-        assets_path: assets_path.as_ptr(),
+        assets_path: assets_path_cstring.as_ptr(),
         window_title: title.as_ptr(),
         window_width: 1024,
         window_height: 768,
     };
 
-    log::info!("Initialize");
+    log::info!("Assets path: {}", assets_path.to_str().unwrap());
     unsafe { vm::init() };
+    log::info!("Successfully initialized virtual machine");
 
-    log::info!("Register quads module");
     vm::register_module(Box::new(modules::quads::QuadsModule::new()));
+    log::info!("Successfully registered quads module");
 
     log::info!("Run shell");
     unsafe { sdl2shell_run(config) };
