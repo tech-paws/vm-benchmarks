@@ -21,6 +21,8 @@ pub fn main() {
     env_logger::init();
 
     let path = env::current_exe().unwrap();
+
+    // TODO(sysint64): Just for debug purposes
     let assets_path = path
         .as_path()
         .parent()
@@ -31,7 +33,6 @@ pub fn main() {
         .unwrap()
         .join("assets");
 
-    // TODO(sysint64): Just for debug purposes
     let assets_path_cstring = CString::new(assets_path.to_str().unwrap()).unwrap();
 
     let title = CString::new("VM Benchmarks").unwrap();
