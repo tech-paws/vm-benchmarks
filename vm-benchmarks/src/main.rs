@@ -1,8 +1,8 @@
 mod modules;
 
+use log;
 use std::{env, ffi::CString, os::raw::c_char};
 use vm;
-use log;
 
 #[repr(C)]
 struct ShellConfig {
@@ -21,8 +21,13 @@ pub fn main() {
     env_logger::init();
 
     let path = env::current_exe().unwrap();
+    // TODO(sysint64): Just for debug purposes
     let assets_path = CString::new(
         path.as_path()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
             .parent()
             .unwrap()
             .join("assets")
