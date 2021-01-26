@@ -3,4 +3,5 @@
 members = [
     "vm",
     "vm-benchmarks",
+    "vm_math/public/rust/vm_math"
 ]

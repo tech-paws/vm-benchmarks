@@ -1,15 +1,37 @@
 use vm::{
     commands,
     commands::Source,
-    data::{BytesBuffer, Command, Vec2f, Vec4f},
+    data::{BytesBuffer, Command},
     module::{Module, ModuleState, CLIENT_ID},
 };
 
-pub struct QuadsModule {}
+use vm_math::*;
+
+pub struct QuadsModule {
+    camera_matrices: CameraMatrices,
+    camera_transform: OthroCameraTransforms,
+    quad_transforms: Transforms2D,
+    quad_model_matrix: Mat4f,
+    quad_mvp_matrix: Mat4f,
+}
 
 impl QuadsModule {
     pub fn new() -> Self {
-        QuadsModule {}
+        QuadsModule {
+            camera_matrices: CameraMatrices::default(),
+            camera_transform: OthroCameraTransforms {
+                viewport_size: Vec2f::new(1024., 768.),
+                position: Vec2f::ZERO,
+                zoom: 1.,
+            },
+            quad_transforms: Transforms2D {
+                position: Vec2f::ZERO,
+                scaling: Vec2f::new(1., 1.),
+                rotation: 0.,
+            },
+            quad_model_matrix: Mat4f::IDENT,
+            quad_mvp_matrix: Mat4f::IDENT,
+        }
     }
 }
 
@@ -18,26 +40,33 @@ impl Module for QuadsModule {
 
     fn shutdown(&mut self, _: &mut ModuleState) {}
 
-    fn step(&mut self, _: &mut ModuleState) {}
+    fn step(&mut self, _: &mut ModuleState) {
+        self.camera_matrices = create_ortho_camera_matrices(self.camera_transform);
+
+        self.quad_transforms.position = Vec2f::new(
+            self.camera_transform.viewport_size.x / 2.,
+            self.camera_transform.viewport_size.y / 2.,
+        );
+
+        self.quad_transforms.scaling = Vec2f::new(430., 600.);
+        // TODO:(sysint64): Use delta time as factor
+        self.quad_transforms.rotation += (0.25 / 1000.) * 20.;
+
+        self.quad_model_matrix = create_2d_model_matrix(self.quad_transforms);
+        self.quad_mvp_matrix = self.camera_matrices.mvp_matrix * self.quad_model_matrix;
+    }
 
     fn render(&mut self, state: &mut ModuleState) {
         let commands_bus = &state.commands_bus;
 
-        let color = Vec4f::new(1.0, 0.0, 0.0, 1.0);
+        let color = Vec4f::new(1.0, 1.0, 0.0, 1.0);
         let command_payload = BytesBuffer::new(&[color]);
         let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
 
         commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
 
-        let args = [
-            // Position
-            Vec2f::new(100.0, 100.0),
-            // Size
-            Vec2f::new(100.0, 100.0),
-        ];
-
-        let command_payload = BytesBuffer::new(&args);
-        let command = Command::new(commands::gapi::DRAW_QUADS, command_payload);
+        let command_payload = BytesBuffer::new(&[self.quad_mvp_matrix]);
+        let command = Command::new(commands::gapi::DRAW_CENTERED_QUADS, command_payload);
 
         commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
     }

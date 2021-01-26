@@ -8,5 +8,6 @@ edition = "2018"
 
 [dependencies]
 vm = { path = "../vm" }
+vm_math = { path = "../vm_math/public/rust/vm_math" }
 env_logger = "0.8.2"
 log = "0.4.13"

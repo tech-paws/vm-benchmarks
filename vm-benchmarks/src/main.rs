@@ -12,7 +12,7 @@ struct ShellConfig {
     window_height: i32,
 }
 
-#[link(name = "sdl2_shell")]
+// #[link(name = "sdl2_shell")]
 extern "C" {
     fn sdl2shell_run(data: ShellConfig);
 }
