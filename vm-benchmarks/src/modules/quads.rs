@@ -40,7 +40,7 @@ impl Module for QuadsModule {
 
     fn shutdown(&mut self, _: &mut ModuleState) {}
 
-    fn step(&mut self, _: &mut ModuleState) {
+    fn step(&mut self, state: &mut ModuleState) {
         self.camera_matrices = create_ortho_camera_matrices(self.camera_transform);
 
         self.quad_transforms.position = Vec2f::new(
@@ -49,8 +49,7 @@ impl Module for QuadsModule {
         );
 
         self.quad_transforms.scaling = Vec2f::new(430., 600.);
-        // TODO:(sysint64): Use delta time as factor
-        self.quad_transforms.rotation += (0.25 / 1000.) * 20.;
+        self.quad_transforms.rotation -= 0.25 * state.delta_time;
 
         self.quad_model_matrix = create_2d_model_matrix(self.quad_transforms);
         self.quad_mvp_matrix = self.camera_matrices.mvp_matrix * self.quad_model_matrix;
