@@ -15,6 +15,12 @@ pub struct QuadsModule {
     quad_mvp_matrix: Mat4f,
 }
 
+#[repr(C)]
+pub struct TextCommandPayload {
+    pub pos: Vec2f,
+    pub text: BytesBuffer,
+}
+
 impl QuadsModule {
     pub fn new() -> Self {
         QuadsModule {
@@ -41,6 +47,8 @@ impl Module for QuadsModule {
     fn shutdown(&mut self, _: &mut ModuleState) {}
 
     fn step(&mut self, state: &mut ModuleState) {
+        let commands = state.get_commands(Source::Processor);
+
         self.camera_matrices = create_ortho_camera_matrices(self.camera_transform);
 
         self.quad_transforms.position = Vec2f::new(
@@ -59,13 +67,23 @@ impl Module for QuadsModule {
         let commands_bus = &state.commands_bus;
 
         let color = Vec4f::new(1.0, 1.0, 0.0, 1.0);
-        let command_payload = BytesBuffer::new(&[color]);
+        let command_payload = &[BytesBuffer::new(&[color])];
         let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
 
         commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
 
-        let command_payload = BytesBuffer::new(&[self.quad_mvp_matrix]);
+        let command_payload = &[BytesBuffer::new(&[self.quad_mvp_matrix])];
         let command = Command::new(commands::gapi::DRAW_CENTERED_QUADS, command_payload);
+
+         commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+
+        let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
+
+        let command_payload = &[
+            BytesBuffer::new(&[Vec2f::new(100., 100.)]),
+            BytesBuffer::from_string(&frame_time),
+        ];
+        let command = Command::new(commands::gapi::DRAW_TEXTS, command_payload);
 
         commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
     }
