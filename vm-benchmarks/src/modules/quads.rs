@@ -80,8 +80,10 @@ impl Module for QuadsModule {
         let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
 
         let command_payload = &[
-            BytesBuffer::new(&[Vec2f::new(100., 100.)]),
-            BytesBuffer::from_string(&frame_time),
+            /* font id */ // TODO
+            /* font size */ BytesBuffer::new::<u32>(&[12]),
+            /* text position */ BytesBuffer::new(&[Vec2f::new(100., 100.)]),
+            /* text */ BytesBuffer::from_string(&frame_time),
         ];
         let command = Command::new(commands::gapi::DRAW_TEXTS, command_payload);
 
