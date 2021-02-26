@@ -55,7 +55,7 @@ impl QuadsModule {
         );
 
         self.quad_transforms.scaling = Vec2f::new(430., 600.);
-        self.quad_transforms.rotation += 0.25 * state.delta_time;
+        self.quad_transforms.rotation -= 0.25 * state.delta_time;
 
         self.quad_model_matrix = create_2d_model_matrix(self.quad_transforms);
         self.quad_mvp_matrix = self.camera_matrices.mvp_matrix * self.quad_model_matrix;
@@ -73,6 +73,10 @@ impl QuadsModule {
 }
 
 impl Module for QuadsModule {
+    fn id(&self)  -> &'static str {
+        "tech.paws.benchmark.quads"
+    }
+
     fn init(&mut self, _: &mut ModuleState) {}
 
     fn shutdown(&mut self, _: &mut ModuleState) {}
@@ -104,7 +108,7 @@ impl Module for QuadsModule {
         let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
         let command_payload = &[
             /* font id */ // TODO
-            /* font size */ BytesBuffer::new::<u32>(&[12]),
+            /* font size */ BytesBuffer::new::<u32>(&[14]),
             /* mvp matrix */ BytesBuffer::new(&[self.text_mvp_matrix]),
             /* text */ BytesBuffer::from_string(&frame_time),
         ];
