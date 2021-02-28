@@ -1,7 +1,9 @@
+use std::mem;
+
 use vm::{
     commands,
     commands::Source,
-    data::{BytesBuffer, Command},
+    data::{BytesBuffer, CCommand, Command},
     module::{Module, ModuleState, CLIENT_ID},
 };
 
@@ -14,6 +16,7 @@ pub struct QuadsModule {
     text_transforms: Transforms2D,
     quad_model_matrix: Mat4f,
     quad_mvp_matrix: Mat4f,
+    boundary_mvp_matrix: Mat4f,
     text_mvp_matrix: Mat4f,
 }
 
@@ -38,6 +41,7 @@ impl QuadsModule {
             },
             quad_model_matrix: Mat4f::IDENT,
             quad_mvp_matrix: Mat4f::IDENT,
+            boundary_mvp_matrix: Mat4f::IDENT,
             text_mvp_matrix: Mat4f::IDENT,
         }
     }
@@ -70,10 +74,21 @@ impl QuadsModule {
         let model_matrix = create_2d_model_matrix(self.text_transforms);
         self.text_mvp_matrix = self.camera_matrices.mvp_matrix * model_matrix;
     }
+
+    fn update_text_boundary(&mut self, boundary: &Vec2f) {
+        let transforms = Transforms2D {
+            position: Vec2f::new(10.0, self.camera_transform.viewport_size.y - 24.),
+            scaling: Vec2f::new(boundary.x, boundary.y),
+            rotation: 0.,
+        };
+
+        let model_matrix = create_2d_model_matrix(transforms);
+        self.boundary_mvp_matrix = self.camera_matrices.mvp_matrix * model_matrix;
+    }
 }
 
 impl Module for QuadsModule {
-    fn id(&self)  -> &'static str {
+    fn id(&self) -> &'static str {
         "tech.paws.benchmark.quads"
     }
 
@@ -83,6 +98,16 @@ impl Module for QuadsModule {
 
     fn step(&mut self, state: &mut ModuleState) {
         let commands = state.get_commands(Source::Processor);
+
+        unsafe {
+            let ccommand = &*(commands.commands);
+
+            if ccommand.count == 1 {
+                let payload = &*(ccommand.payload);
+                let vec = &*(payload.base as *const Vec2f);
+                self.update_text_boundary(vec);
+            }
+        }
 
         self.update_camera();
         self.update_quad(state);
@@ -99,6 +124,15 @@ impl Module for QuadsModule {
 
         let command_payload = &[BytesBuffer::new(&[self.quad_mvp_matrix])];
         let command = Command::new(commands::gapi::DRAW_CENTERED_QUADS, command_payload);
+        commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+
+        let color = Vec4f::new(0.0, 0.5, 0.5, 1.0);
+        let command_payload = &[BytesBuffer::new(&[color])];
+        let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
+        commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+
+        let command_payload = &[BytesBuffer::new(&[self.boundary_mvp_matrix])];
+        let command = Command::new(commands::gapi::DRAW_QUADS, command_payload);
         commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
 
         let command_payload = &[BytesBuffer::new(&[0u64])];
