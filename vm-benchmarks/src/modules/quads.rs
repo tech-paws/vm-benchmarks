@@ -5,6 +5,7 @@ use vm::{
     module::{Module, ModuleState, CLIENT_ID},
 };
 
+use vm_buffers::IntoVMBuffers;
 use vm_math::*;
 
 pub struct QuadsModule {
@@ -95,17 +96,17 @@ impl Module for QuadsModule {
     fn shutdown(&mut self, _: &mut ModuleState) {}
 
     fn step(&mut self, state: &mut ModuleState) {
-        let commands = state.get_commands(Source::Processor);
+        // let commands = state.get_commands(Source::Processor);
 
-        unsafe {
-            let ccommand = &*(commands.commands);
+        // unsafe {
+        //     let ccommand = &*(commands.commands);
 
-            if ccommand.count == 1 {
-                let payload = &*(ccommand.payload);
-                let vec = &*(payload.base as *const Vec2f);
-                self.update_text_boundary(vec);
-            }
-        }
+        //     if ccommand.count == 1 {
+        //         let payload = &*(ccommand.payload);
+        //         let vec = &*(payload.base as *const Vec2f);
+        //         self.update_text_boundary(vec);
+        //     }
+        // }
 
         self.update_camera();
         self.update_quad(state);
@@ -120,31 +121,70 @@ impl Module for QuadsModule {
         let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
         commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
 
-        let command_payload = &[BytesBuffer::new(&[self.quad_mvp_matrix])];
-        let command = Command::new(commands::gapi::DRAW_CENTERED_QUADS, command_payload);
-        commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-        let color = Vec4f::new(0.0, 0.5, 0.5, 1.0);
-        let command_payload = &[BytesBuffer::new(&[color])];
-        let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
-        commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-        let command_payload = &[BytesBuffer::new(&[self.boundary_mvp_matrix])];
-        let command = Command::new(commands::gapi::DRAW_QUADS, command_payload);
-        commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-        let command_payload = &[BytesBuffer::new(&[0u64])];
-        let command = Command::new(commands::gapi::SET_TEXTURE_PIPELINE, command_payload);
-        commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+        commands_bus.push_command_new(
+            CLIENT_ID,
+            commands::gapi::set_color_pipeline::Command::new(Vec4f::new(1.0, 1.0, 0.0, 1.0)),
+        );
+        commands_bus.push_command_new(
+            CLIENT_ID,
+            commands::gapi::draw_centered_quads::Command::new(&[self.quad_mvp_matrix]),
+        );
+        commands_bus.push_command_new(
+            CLIENT_ID,
+            commands::gapi::set_color_pipeline::Command::new(Vec4f::new(0.0, 0.5, 0.5, 1.0)),
+        );
+        commands_bus.push_command_new(
+            CLIENT_ID,
+            commands::gapi::draw_quads::Command::new(&[self.boundary_mvp_matrix]),
+        );
+        commands_bus.push_command_new(
+            CLIENT_ID,
+            commands::gapi::set_texture_pipeline::Command::new(0),
+        );
 
         let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
-        let command_payload = &[
-            /* font id */ // TODO
-            /* font size */ BytesBuffer::new::<u32>(&[14]),
-            /* mvp matrix */ BytesBuffer::new(&[self.text_mvp_matrix]),
-            /* text */ BytesBuffer::from_string(&frame_time),
-        ];
-        let command = Command::new(commands::gapi::DRAW_TEXTS, command_payload);
-        commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+        let text = commands::gapi::draw_texts::TextData {
+            font_id: 0,
+            font_size: 14,
+            mvp_matrix: self.text_mvp_matrix,
+            text: frame_time,
+        };
+        commands_bus.push_command_new(CLIENT_ID, commands::gapi::draw_texts::Command::new(&[text]));
     }
+
+    // fn render_old(&mut self, state: &mut ModuleState) {
+    //     let commands_bus = &state.commands_bus;
+
+    //     let color = Vec4f::new(1.0, 1.0, 0.0, 1.0);
+    //     let command_payload = &[BytesBuffer::new(&[color])];
+    //     let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
+    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+
+    //     let command_payload = &[BytesBuffer::new(&[self.quad_mvp_matrix])];
+    //     let command = Command::new(commands::gapi::DRAW_CENTERED_QUADS, command_payload);
+    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+
+    //     let color = Vec4f::new(0.0, 0.5, 0.5, 1.0);
+    //     let command_payload = &[BytesBuffer::new(&[color])];
+    //     let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
+    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+
+    //     let command_payload = &[BytesBuffer::new(&[self.boundary_mvp_matrix])];
+    //     let command = Command::new(commands::gapi::DRAW_QUADS, command_payload);
+    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+
+    //     let command_payload = &[BytesBuffer::new(&[0u64])];
+    //     let command = Command::new(commands::gapi::SET_TEXTURE_PIPELINE, command_payload);
+    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+
+    //     let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
+    //     let command_payload = &[
+    //         /* font id */ // TODO
+    //         /* font size */ BytesBuffer::new::<u32>(&[14]),
+    //         /* mvp matrix */ BytesBuffer::new(&[self.text_mvp_matrix]),
+    //         /* text */ BytesBuffer::from_string(&frame_time),
+    //     ];
+    //     let command = Command::new(commands::gapi::DRAW_TEXTS, command_payload);
+    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
+    // }
 }

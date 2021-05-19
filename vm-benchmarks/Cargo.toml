@@ -9,5 +9,6 @@ edition = "2018"
 [dependencies]
 vm = { git = "https://github.com/tech-paws/vm.git" }
 vm_math = { git = "https://github.com/tech-paws/vm_math.git" }
+vm_buffers = { git = "https://github.com/tech-paws/vm_buffers.git" }
 env_logger = "0.8.2"
 log = "0.4.13"
