@@ -1,9 +1,7 @@
-use std::mem;
-
 use vm::{
     commands,
     commands::Source,
-    data::{BytesBuffer, CCommand, Command},
+    data::{BytesBuffer, Command},
     module::{Module, ModuleState, CLIENT_ID},
 };
 
