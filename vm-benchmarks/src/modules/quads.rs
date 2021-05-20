@@ -2,6 +2,7 @@ use vm::{
     commands,
     commands::Source,
     data::{BytesBuffer, Command},
+    gapi,
     module::{Module, ModuleState, CLIENT_ID},
 };
 
@@ -114,77 +115,25 @@ impl Module for QuadsModule {
     }
 
     fn render(&mut self, state: &mut ModuleState) {
-        let commands_bus = &state.commands_bus;
+        let gapi_context = gapi::GApiContext {
+            address: CLIENT_ID,
+            commands_bus: &mut state.commands_bus,
+        };
 
-        let color = Vec4f::new(1.0, 1.0, 0.0, 1.0);
-        let command_payload = &[BytesBuffer::new(&[color])];
-        let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
-        commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-        commands_bus.push_command_new(
-            CLIENT_ID,
-            commands::gapi::set_color_pipeline::Command::new(Vec4f::new(1.0, 1.0, 0.0, 1.0)),
-        );
-        commands_bus.push_command_new(
-            CLIENT_ID,
-            commands::gapi::draw_centered_quads::Command::new(&[self.quad_mvp_matrix]),
-        );
-        commands_bus.push_command_new(
-            CLIENT_ID,
-            commands::gapi::set_color_pipeline::Command::new(Vec4f::new(0.0, 0.5, 0.5, 1.0)),
-        );
-        commands_bus.push_command_new(
-            CLIENT_ID,
-            commands::gapi::draw_quads::Command::new(&[self.boundary_mvp_matrix]),
-        );
-        commands_bus.push_command_new(
-            CLIENT_ID,
-            commands::gapi::set_texture_pipeline::Command::new(0),
-        );
+        gapi::set_color_pipeline(&gapi_context, Vec4f::new(1.0, 1.0, 0.0, 1.0));
+        gapi::draw_centered_quads(&gapi_context, &[self.quad_mvp_matrix]);
+        gapi::set_color_pipeline(&gapi_context, Vec4f::new(0.0, 0.5, 0.5, 1.0));
+        gapi::draw_quads(&gapi_context, &[self.boundary_mvp_matrix]);
+        gapi::set_texture_pipeline(&gapi_context, 0);
 
         let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
-        let text = commands::gapi::draw_texts::TextData {
+        let text = gapi::TextData {
             font_id: 0,
             font_size: 14,
             mvp_matrix: self.text_mvp_matrix,
             text: frame_time,
         };
-        commands_bus.push_command_new(CLIENT_ID, commands::gapi::draw_texts::Command::new(&[text]));
+
+        gapi::draw_texts(&gapi_context, &[text]);
     }
-
-    // fn render_old(&mut self, state: &mut ModuleState) {
-    //     let commands_bus = &state.commands_bus;
-
-    //     let color = Vec4f::new(1.0, 1.0, 0.0, 1.0);
-    //     let command_payload = &[BytesBuffer::new(&[color])];
-    //     let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
-    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-    //     let command_payload = &[BytesBuffer::new(&[self.quad_mvp_matrix])];
-    //     let command = Command::new(commands::gapi::DRAW_CENTERED_QUADS, command_payload);
-    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-    //     let color = Vec4f::new(0.0, 0.5, 0.5, 1.0);
-    //     let command_payload = &[BytesBuffer::new(&[color])];
-    //     let command = Command::new(commands::gapi::SET_COLOR_PIPELINE, command_payload);
-    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-    //     let command_payload = &[BytesBuffer::new(&[self.boundary_mvp_matrix])];
-    //     let command = Command::new(commands::gapi::DRAW_QUADS, command_payload);
-    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-    //     let command_payload = &[BytesBuffer::new(&[0u64])];
-    //     let command = Command::new(commands::gapi::SET_TEXTURE_PIPELINE, command_payload);
-    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-
-    //     let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
-    //     let command_payload = &[
-    //         /* font id */ // TODO
-    //         /* font size */ BytesBuffer::new::<u32>(&[14]),
-    //         /* mvp matrix */ BytesBuffer::new(&[self.text_mvp_matrix]),
-    //         /* text */ BytesBuffer::from_string(&frame_time),
-    //     ];
-    //     let command = Command::new(commands::gapi::DRAW_TEXTS, command_payload);
-    //     commands_bus.push_command(CLIENT_ID, command, Source::GAPI);
-    // }
 }
