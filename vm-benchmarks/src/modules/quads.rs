@@ -14,10 +14,13 @@ pub struct QuadsModule {
     camera_transform: OthroCameraTransforms,
     quad_transforms: Transforms2D,
     text_transforms: Transforms2D,
+    text2_transforms: Transforms2D,
     quad_model_matrix: Mat4f,
     quad_mvp_matrix: Mat4f,
     boundary_mvp_matrix: Mat4f,
+    boundary2_mvp_matrix: Mat4f,
     text_mvp_matrix: Mat4f,
+    text2_mvp_matrix: Mat4f,
 }
 
 impl QuadsModule {
@@ -39,10 +42,17 @@ impl QuadsModule {
                 scaling: Vec2f::new(1., 1.),
                 rotation: 0.,
             },
+            text2_transforms: Transforms2D {
+                position: Vec2f::ZERO,
+                scaling: Vec2f::new(1., 1.),
+                rotation: 0.,
+            },
             quad_model_matrix: Mat4f::IDENT,
             quad_mvp_matrix: Mat4f::IDENT,
             boundary_mvp_matrix: Mat4f::IDENT,
+            boundary2_mvp_matrix: Mat4f::IDENT,
             text_mvp_matrix: Mat4f::IDENT,
+            text2_mvp_matrix: Mat4f::IDENT,
         }
     }
 }
@@ -73,6 +83,16 @@ impl QuadsModule {
 
         let model_matrix = create_2d_model_matrix(self.text_transforms);
         self.text_mvp_matrix = self.camera_matrices.mvp_matrix * model_matrix;
+    }
+
+    fn update_text2(&mut self) {
+        self.text2_transforms.position =
+            Vec2f::new(10.0, self.camera_transform.viewport_size.y - 48.);
+
+        self.text2_transforms.scaling = Vec2f::new(1., 1.);
+
+        let model_matrix = create_2d_model_matrix(self.text2_transforms);
+        self.text2_mvp_matrix = self.camera_matrices.mvp_matrix * model_matrix;
     }
 
     fn update_text_boundary(&mut self, boundary: &Vec2f) {
@@ -112,6 +132,7 @@ impl Module for QuadsModule {
         self.update_camera();
         self.update_quad(state);
         self.update_text();
+        self.update_text2();
     }
 
     fn render(&mut self, state: &mut ModuleState) {
@@ -123,17 +144,23 @@ impl Module for QuadsModule {
         gapi::set_color_pipeline(&gapi_context, Vec4f::new(1.0, 1.0, 0.0, 1.0));
         gapi::draw_centered_quads(&gapi_context, &[self.quad_mvp_matrix]);
         gapi::set_color_pipeline(&gapi_context, Vec4f::new(0.0, 0.5, 0.5, 1.0));
-        gapi::draw_quads(&gapi_context, &[self.boundary_mvp_matrix]);
+        gapi::draw_quads(&gapi_context, &[self.boundary_mvp_matrix, self.boundary2_mvp_matrix]);
         gapi::set_texture_pipeline(&gapi_context, 0);
 
         let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
-        let text = gapi::TextData {
+        let text1 = gapi::TextData {
             font_id: 0,
             font_size: 14,
             mvp_matrix: self.text_mvp_matrix,
             text: frame_time,
         };
+        let text2 = gapi::TextData {
+            font_id: 0,
+            font_size: 20,
+            mvp_matrix: self.text2_mvp_matrix,
+            text: String::from("Hello World!"),
+        };
 
-        gapi::draw_texts(&gapi_context, &[text]);
+        gapi::draw_texts(&gapi_context, &[text1, text2]);
     }
 }
