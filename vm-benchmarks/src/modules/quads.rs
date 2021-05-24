@@ -1,12 +1,9 @@
 use vm::{
-    commands,
-    commands::Source,
-    data::{BytesBuffer, Command},
+    commands::{self, Source},
     gapi,
     module::{Module, ModuleState, CLIENT_ID},
 };
 
-use vm_buffers::IntoVMBuffers;
 use vm_math::*;
 
 pub struct QuadsModule {
@@ -95,15 +92,26 @@ impl QuadsModule {
         self.text2_mvp_matrix = self.camera_matrices.mvp_matrix * model_matrix;
     }
 
-    fn update_text_boundary(&mut self, boundary: &Vec2f) {
+    fn update_text_boundary(&mut self, w: f32, h: f32) {
         let transforms = Transforms2D {
             position: Vec2f::new(10.0, self.camera_transform.viewport_size.y - 24.),
-            scaling: Vec2f::new(boundary.x, boundary.y),
+            scaling: Vec2f::new(w, h),
             rotation: 0.,
         };
 
         let model_matrix = create_2d_model_matrix(transforms);
         self.boundary_mvp_matrix = self.camera_matrices.mvp_matrix * model_matrix;
+    }
+
+    fn update_text2_boundary(&mut self, w: f32, h: f32) {
+        let transforms = Transforms2D {
+            position: Vec2f::new(10.0, self.camera_transform.viewport_size.y - 48.),
+            scaling: Vec2f::new(w, h),
+            rotation: 0.,
+        };
+
+        let model_matrix = create_2d_model_matrix(transforms);
+        self.boundary2_mvp_matrix = self.camera_matrices.mvp_matrix * model_matrix;
     }
 }
 
@@ -117,17 +125,24 @@ impl Module for QuadsModule {
     fn shutdown(&mut self, _: &mut ModuleState) {}
 
     fn step(&mut self, state: &mut ModuleState) {
-        // let commands = state.get_commands(Source::Processor);
+        state.get_commands_new(Source::Processor, |commands_reader| {
+            let mut i = 0;
 
-        // unsafe {
-        //     let ccommand = &*(commands.commands);
+            while let Some(command) = commands_reader.next() {
+                if command.id == commands::ADD_TEXT_BOUNDARIES {
+                    i += 1;
 
-        //     if ccommand.count == 1 {
-        //         let payload = &*(ccommand.payload);
-        //         let vec = &*(payload.base as *const Vec2f);
-        //         self.update_text_boundary(vec);
-        //     }
-        // }
+                    let w = command.bytes_reader.read_f32();
+                    let h = command.bytes_reader.read_f32();
+
+                    if i == 1 {
+                        self.update_text_boundary(w, h);
+                    } else if i == 2 {
+                        self.update_text2_boundary(w, h);
+                    }
+                }
+            }
+        });
 
         self.update_camera();
         self.update_quad(state);
@@ -137,6 +152,7 @@ impl Module for QuadsModule {
 
     fn render(&mut self, state: &mut ModuleState) {
         let gapi_context = gapi::GApiContext {
+            from: self.id(),
             address: CLIENT_ID,
             commands_bus: &mut state.commands_bus,
         };
@@ -144,7 +160,10 @@ impl Module for QuadsModule {
         gapi::set_color_pipeline(&gapi_context, Vec4f::new(1.0, 1.0, 0.0, 1.0));
         gapi::draw_centered_quads(&gapi_context, &[self.quad_mvp_matrix]);
         gapi::set_color_pipeline(&gapi_context, Vec4f::new(0.0, 0.5, 0.5, 1.0));
-        gapi::draw_quads(&gapi_context, &[self.boundary_mvp_matrix, self.boundary2_mvp_matrix]);
+        gapi::draw_quads(
+            &gapi_context,
+            &[self.boundary_mvp_matrix, self.boundary2_mvp_matrix],
+        );
         gapi::set_texture_pipeline(&gapi_context, 0);
 
         let frame_time = format!("Frame Time: {:?}", state.last_time.elapsed());
